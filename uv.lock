@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 3
 requires-python = ">=3.13"
 
 [[package]]
@@ -294,6 +294,7 @@ dependencies = [
     { name = "openai" },
     { name = "openai-agents" },
     { name = "pydantic" },
+    { name = "python-dotenv" },
 ]
 
 [package.metadata]
@@ -302,6 +303,7 @@ requires-dist = [
     { name = "openai", specifier = ">=1.99.7" },
     { name = "openai-agents", specifier = ">=0.2.5" },
     { name = "pydantic", specifier = ">=2.11.7" },
+    { name = "python-dotenv", specifier = ">=1.1.1" },
 ]
 
 [[package]]
