@@ -6,7 +6,7 @@ from openai import AsyncOpenAI
 
 load_dotenv()
 
-API_KEY = os.getenv("OPEN_ROUTER_API")
+API_KEY = os.getenv("OPENROUTER_API_KEY")
 if not API_KEY:
     raise ValueError("Missing OPENROUTER_API_KEY environment variable")
 
@@ -26,22 +26,7 @@ class UserInfo(BaseModel):
     favourite_subject: str
     quiz: str
 
-
-class AnswerAgent(BaseModel):
-     answers: list[str]
-
-
-
-
-
-
-
-class CompareResult(BaseModel):
-    correct_count: int
-    wrong_count: int
-
-
-
+# Simple approach: just use one agent that collects info and creates quiz
 main_agent = Agent(
     name="StudentHelper",
     instructions="""You are a friendly teaching assistant.
@@ -51,57 +36,14 @@ main_agent = Agent(
     model=model,
     output_type=UserInfo
 )
-
-
-Answeragent = Agent(
-    name="QuizAnswerBot",
-       instructions="""You are an expert in all school subjects.
-    Given the quiz questions with multiple choice answers, return the correct option letter and the correct answer text for each question, in the same order
-    """,
-    model=model,
-    output_type=AnswerAgent
-)
-
-compare_agent = Agent(
-    name="CompareAnswers",
-    instructions=(
-        "You will be given the correct answers and the user's answers for a quiz. "
-        "Count how many answers are correct and how many are wrong. "
-        "Return only the numbers as 'correct_count' and 'wrong_count'."
-    ),
-    model=model,
-    output_type=CompareResult
-)
-
-
 result = Runner.run_sync(
     main_agent,
-   input("enter your details"),
-    
-)
-
-answer_result = Runner.run_sync(
-     Answeragent,
-    f"Questions: {result.final_output.quiz}."
+    "My name is John and my favorite subject is Math.",
 )
 
 print("\nExtracted Information:")
 print(f"Name: {result.final_output.name}")
 print(f"Favourite Subject: {result.final_output.favourite_subject}")
+
 print("\nGenerated Quiz:")
 print(result.final_output.quiz)
-# print(f"Answer of quiz:{answer_result.final_output.answers}")
-
-
-
-user_answers = []
-for i in range(len(answer_result.final_output.answers)):
-    ans = input(f"Your answer for Q{i+1} (a/b/c/d): ").strip().lower()
-    user_answers.append(ans)
-
-
-compare_input = f"Correct answers: {answer_result.final_output.answers}\nUser answers: {user_answers}"
-compare_result = Runner.run_sync(compare_agent, compare_input)
-
-print(f"\n Correct: {compare_result.final_output.correct_count}")
-print(f" Wrong: {compare_result.final_output.wrong_count}")
