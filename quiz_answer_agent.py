@@ -6,7 +6,7 @@ from openai import AsyncOpenAI
 
 load_dotenv()
 
-API_KEY = os.getenv("OPEN_ROUTER_API")
+API_KEY = os.getenv("OPENROUTER_API_KEY")
 if not API_KEY:
     raise ValueError("Missing OPENROUTER_API_KEY environment variable")
 
@@ -32,10 +32,6 @@ class AnswerAgent(BaseModel):
 
 
 
-
-
-
-
 class CompareResult(BaseModel):
     correct_count: int
     wrong_count: int
@@ -55,9 +51,9 @@ main_agent = Agent(
 
 Answeragent = Agent(
     name="QuizAnswerBot",
-       instructions="""You are an expert in all school subjects.
-    Given the quiz questions with multiple choice answers, return the correct option letter and the correct answer text for each question, in the same order
-    """,
+    instructions="""You are an expert in all school subjects.
+        Given the quiz questions with multiple choice answers, return the correct option letter and the correct answer text for each question, in the same order
+        """,
     model=model,
     output_type=AnswerAgent
 )
@@ -76,12 +72,11 @@ compare_agent = Agent(
 
 result = Runner.run_sync(
     main_agent,
-   input("enter your details"),
-    
+   input("Enter your name and favourite subject: "),
 )
 
 answer_result = Runner.run_sync(
-     Answeragent,
+    Answeragent,
     f"Questions: {result.final_output.quiz}."
 )
 
@@ -90,8 +85,7 @@ print(f"Name: {result.final_output.name}")
 print(f"Favourite Subject: {result.final_output.favourite_subject}")
 print("\nGenerated Quiz:")
 print(result.final_output.quiz)
-# print(f"Answer of quiz:{answer_result.final_output.answers}")
-
+print(f"Answer of quiz:{answer_result.final_output.answers}")
 
 
 user_answers = []
