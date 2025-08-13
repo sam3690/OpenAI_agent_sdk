@@ -1,7 +1,7 @@
 import os 
 from dotenv import load_dotenv
 from pydantic import BaseModel
-from agents import Agent, Runner, OpenAIChatCompletionsModel, set_tracing_disabled
+from agents import Agent, Runner, handoff, OpenAIChatCompletionsModel, set_tracing_disabled
 from openai import AsyncOpenAI
 
 load_dotenv()
@@ -26,19 +26,31 @@ class UserInfo(BaseModel):
     favourite_subject: str
     quiz: str
 
+quiz_agent = Agent(
+    name="QuizAgent",
+    instructions="""You are a quiz generator.
+        You will receive the student's name and favorite subject.
+        Create a fun 3 question quiz based on their favorite subject.
+        Return the complete information including name, subject, and quiz.""",
+    model=model,
+    output_type=UserInfo
+)
+
 # Simple approach: just use one agent that collects info and creates quiz
 main_agent = Agent(
     name="StudentHelper",
     instructions="""You are a friendly teaching assistant.
-    Extract the student's name and favourite subject from their message.
-    Then create a fun 3-question quiz about their favourite subject.
-    Return the structured data with name and subject.""",
+        Extract the student's name and favorite subject from their message.
+        Then immediately hand off to QuizAgent with the extracted information.
+        Pass the name and subject to QuizAgent so it can generate a quiz.""",
     model=model,
-    output_type=UserInfo
+    # handoffs={quiz_agent.name: handoff(quiz_agent)},
+    handoffs=[quiz_agent]
+    # output_type=UserInfo
 )
 result = Runner.run_sync(
     main_agent,
-    "My name is John and my favorite subject is Math.",
+    "Hello! I am Ali and my favourite subject is Mathematics.",
 )
 
 print("\nExtracted Information:")
