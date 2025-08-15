@@ -40,3 +40,5 @@ result = Runner.run_sync(agent, [
     ],)
 
 print(result.final_output)
+
+result = Runner.run_sync(agent, 'give me an idea for ecomerce website technolgy',context)
