@@ -21,7 +21,6 @@ client = AsyncOpenAI(
 )
 set_tracing_disabled(disabled=True)
 
-#Define output schema
 class CalendarEvent(BaseModel):
     name: str
     date: str
