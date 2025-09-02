@@ -3,9 +3,10 @@ from dotenv import load_dotenv
 # from pydantic import BaseModel
 from agents import Agent, Runner, OpenAIChatCompletionsModel, set_tracing_disabled, SQLiteSession
 from agents.run import RunConfig
-from openai import AsyncOpenAI
+from openai import AsyncOpenAI, OpenAI
 
-class HistoryAgent:
+class TradingAgent:
+    """An Trading Agent that searches web for stock or crypto market and maintains conversation history using SQLite."""
     def __init__(self):
         load_dotenv()
 
@@ -17,34 +18,45 @@ class HistoryAgent:
 
         set_tracing_disabled(disabled=True)
 
+        # Initialize the OpenAI client
         self.client = AsyncOpenAI(
-            base_url="https://openrouter.ai/api/v1",
-            api_key=self.API_KEY
+            api_key=self.API_KEY,
+            base_url="https://openrouter.ai/api/v1"
         )
 
+        # Initialize the model
         self.model = OpenAIChatCompletionsModel(
-            model='deepseek/deepseek-r1-0528',
+            model='openai/gpt-oss-20b',
             openai_client=self.client
         )
 
+        # Configure the run settings
         self.config = RunConfig(
             model=self.model,
             model_provider=self.client,
             tracing_disabled=True
         )
-
+        
+        # Initialize the agent
         self.agent = Agent(
-            name="math agent",
-            instructions="Answer any question user asks related to arithimatics only.",
+            name="TradingAgent",
+            instructions="Answer any question user asks related to trading stocks or crypto only."
+            "Use the web search tool to get the latest information about stock or crypto market.",
             model=self.model
+            # tools=[WebSearchTool()]
         )
-
-    
 
     def run(self):
         """Run the agent with a given message"""
+        print("""
+                This agent can only answer questions related to trading stocks or crypto.
+                Starting agent session. Type 'exit' to quit.
+              """)
+
         while True:
-            message = input("Enter a message for the agent: ")
+
+            message = input("\nEnter a message for the agent: ")
+            
             if message.lower() == "exit":
                 print("Exiting agent session...")
                 break
@@ -56,9 +68,14 @@ class HistoryAgent:
                     run_config=self.config,
                     session=self.session
                 )
+                # results = self.client.agents.responses.create(
+                #     session_id=self.session.id,
+                #     messages=[{"role": "user", "content": message}],
+                # )
                 print("\nCalling Agent\n")
-                print(results.final_output)
+                # print(results.final_output)
+                print(results.output_text)
                 # return results.final_output
             except Exception as e:
                 print(f"Error running agent: {e}")
-                return None
+                return None       
