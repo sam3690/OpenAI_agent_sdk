@@ -111,3 +111,9 @@ class ToolAgent:
             except Exception as e:
                 print(f"Error running agent: {e}")
                 return None
+
+
+if __name__ == "__main__":
+    agent = ToolAgent()
+    import asyncio
+    asyncio.run(agent.run())

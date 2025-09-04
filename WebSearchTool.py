@@ -1,6 +1,5 @@
 from agents import function_tool
-from duckduckgo_search import DDGS
-
+from ddgs import DDGS
 @function_tool
 def custom_web_search(query: str) -> str:
     """Search the web for the latest information on stocks or crypto markets.
