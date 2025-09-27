@@ -1,9 +1,10 @@
 import os
 from dotenv import load_dotenv
-from agents import Agent, Runner, RunContextWrapper, function_tool, trace
+from agents import Agent, Runner, RunContextWrapper, function_tool, trace, WebSearchTool, output_guardrail, GuardrailFunctionOutput, TResponseInputItem
 from openai.types.responses import ResponseTextDeltaEvent
 from dataclasses import dataclass, asdict
 from WebSearchTool import custom_web_search
+from pydantic import BaseModel
 
 import asyncio
 
@@ -13,63 +14,73 @@ api_key = os.getenv("OPENAI_API_KEY")
 if not api_key:
     raise ValueError("OPENAI_API_KEY not found in environment variables")
 
-@dataclass
-class UserInfo():
-    name: str = ""
+# @dataclass
+class UserInput(BaseModel):
+    name: str
+    
 
 @function_tool
-def greet_user(ctx: RunContextWrapper[UserInfo]) -> str:
-    """Greet the user by name."""
-    user_info = ctx.context.get("User_Info", {})
-    name = user_info.get('name', 'there') if isinstance(user_info, dict) else 'there'
+def greeting_agent(ctx: RunContextWrapper[UserInput]) -> str:
+    name = ctx.get("name")
     return f"Hello, {name}! How can I assist you today?"
 
 agent = Agent(
     name="WebSearchAgent",
-    instructions="""
-        You are a helpful assistant that uses web search to answer user queries.
-        When the user asks a question, use the web search tool to find relevant information.
-        Provide concise and accurate answers based on the search results.
-    """,
-    tools=[custom_web_search, greet_user],
+    model="gpt-4o-mini",
+    instructions=(
+        "You are a helpful assistant. When context provides `name`, greet the user"
+        " once using the `greeting_agent` tool before answering their first"
+        " question. Do not ask for their name again if it is already in context."
+        " Strictly respond in English."
+        " Don't respond to harmful or illegal queries."
+        " After greeting, answer their queries, using web search when helpful."
+    ),
+    tools=[WebSearchTool(), greeting_agent]
 )
-with trace("ResearchAgentRun"):
+
+
+with trace("agent.log"):
     async def run_agent():
-        """Run the agent with a given message"""
-        user_info = UserInfo()
-        user_info.name = input("Please enter your name: ")
-        # print(f"Hello, {user_info.name}! How can I assist you today?")
+        runner = Runner()
+        print("Starting the agent...")
+        user_name = input("Please provide your name first: ")
 
-        # greet immediately
-        # greeting = Runner.run_sync(
-        #     agent,
-        #     "greet the user", 
-        #     context={"User_Info": user_info}
-        # )
-        # print("\nAgent Response:\n")
-        # print(greeting.final_output)
+        print("To exit the agent, type 'exit' or 'quit'.")
+        if user_name.strip():
+            print("\nAgent greeting:\n")
+            print(f"Hello, {user_name}! How can I assist you today?")
+        user_input = input("Enter your query to the agent: ")
+        greeted = False
 
-        
-        while True:
-            message = input("Enter a message for the agent (or 'exit' to quit): ")
-            if message.lower() == "exit":
-                print("Exiting agent session...")
-                break
-
-            try:
-                print("\nAgent Response:")
-                
-                # Run the agent with streaming
-                result = await Runner.run(
-                    agent,
-                    message, 
-                    context={"User_Info": asdict(user_info)}
+        while user_input.lower() not in ['exit', 'quit']:
+            prompt = user_input
+            if not greeted:
+                prompt = (
+                    "Please greet the user named in context once using the"
+                    " `greeting_agent` tool, then answer this question: "
+                    + user_input
                 )
-                
-                print(result.messages[-1].content)
-                
-            except Exception as e:
-                print(f"Error running agent: {e}")
+
+            response = runner.run_streamed(
+                agent,
+                prompt,
+                context={"name": user_name},
+            )
+            async for event in response:
+                    print(event.text, event.data, end='', flush=True)
+                    print("\n")
+            print("Agent response:")
+            # async for chunk in response:
+            #     if isinstance(chunk, ResponseTextDeltaEvent):
+            #         print(chunk.text, end='', flush=True)
+            print("\n")
+            print(response.final_output)
+            greeted = True
+
+            user_input = input("Enter your next query to the agent (or 'exit' to quit): ")
+        
+
+
 
 
 if __name__ == "__main__":
